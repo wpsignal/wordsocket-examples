@@ -1,0 +1,4 @@
+*
+!.gitignore
+!wordsocket-live-feed
+!wordsocket-live-feed/**/*

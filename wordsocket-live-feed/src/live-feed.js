@@ -5,7 +5,15 @@
 import { store, getServerState } from "@wordpress/interactivity";
 
 const CARD_SELECTOR = ".wpslf-item";
-const DURATION = 300;
+const DURATIONS = {
+  move: 300,
+  flash: 1000,
+  exit: 400,
+};
+const STATE_BG_COLORS = {
+  updated: "#bbf7d0",
+  deleted: "#fecaca",
+};
 
 const { state } = store("wordsocket/live-feed", {
   state: {
@@ -15,44 +23,71 @@ const { state } = store("wordsocket/live-feed", {
 
 const cards = () => document.querySelectorAll(CARD_SELECTOR);
 
-const prefersReducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/**
+ * Resolver function to retrieve a card by its post ID.
+ *
+ * @param postId Post ID data attribute value.
+ * @returns DOM element with the given post ID.
+ */
+function cardById(postId) {
+  return document.querySelector(`${CARD_SELECTOR}[data-post-id="${postId}"]`);
+}
+
+/**
+ * Check if the user has enabled reduced motion.
+ *
+ * @returns True if the user has enabled reduced motion, false otherwise.
+ */
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 /**
  * Record where every card sits, apply the state change, then animate
  * each surviving card from its old position to its new one.
  */
-const animateCards = (mutate) => {
+function animateCards(mutateCallback) {
   if (prefersReducedMotion()) {
-    mutate();
+    mutateCallback();
     return;
   }
 
   const before = new Map(
     [...cards()].map((el) => [el.dataset.postId, el.getBoundingClientRect()]),
   );
-  mutate();
+  mutateCallback();
 
   requestAnimationFrame(() => {
     for (const el of cards()) {
       const first = before.get(el.dataset.postId);
-      if (!first) continue; // brand-new card: nothing to slide from
+
+      // Brand-new card: nothing to slide from.
+      if (!first) {
+        continue;
+      }
 
       const last = el.getBoundingClientRect();
-      const dx = first.left - last.left;
-      const dy = first.top - last.top;
-      if (!dx && !dy) continue; // did not move
+      const deltaX = first.left - last.left;
+      const deltaY = first.top - last.top;
+
+      // Card did not move.
+      if (!deltaX && !deltaY) {
+        continue;
+      }
 
       el.animate(
-        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
-        { duration: DURATION, easing: "ease" },
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)` },
+          { transform: "none" },
+        ],
+        { duration: DURATIONS.move, easing: "ease" },
       );
     }
   });
-};
+}
 
 /**
- * Handle the `livefeed.updated` event.
+ * WPSignal: Handle the `livefeed.updated` event.
  */
 WPS.on("livefeed.updated", (updatedPost) => {
   animateCards(() => {
@@ -63,22 +98,52 @@ WPS.on("livefeed.updated", (updatedPost) => {
     } else {
       posts.unshift(updatedPost);
     }
-    // Match wp-admin: newest first, ties broken by oldest id first.
+
+    // Same order as in `render.php`. post_date strings ("YYYY-MM-DD HH:MM:SS")
     state.posts = posts.sort(
-      (a, b) => new Date(b.date) - new Date(a.date) || a.postId - b.postId,
+      (a, b) => b.date.localeCompare(a.date) || a.postId - b.postId,
+    );
+  });
+
+  // Flash after the re-render so a freshly inserted card exists in the DOM.
+  requestAnimationFrame(() => {
+    const el = cardById(updatedPost.postId);
+    if (!el || prefersReducedMotion()) {
+      return;
+    }
+    const base = getComputedStyle(el).backgroundColor;
+    el.animate(
+      [{ backgroundColor: STATE_BG_COLORS.updated }, { backgroundColor: base }],
+      { duration: DURATIONS.flash, easing: "ease-out" },
     );
   });
 });
 
-
 /**
- * Handle the `livefeed.deleted` event.
+ * WPSignal: Handle the `livefeed.deleted` event.
  */
 WPS.on("livefeed.deleted", ({ postId }) => {
   if (!state.posts.some((p) => p.postId === postId)) {
     return; // not in the current feed
   }
-  animateCards(() => {
-    state.posts = state.posts.filter((p) => p.postId !== postId);
-  });
+
+  const removeFromFeed = () =>
+    animateCards(() => {
+      state.posts = state.posts.filter((p) => p.postId !== postId);
+    });
+
+  const el = cardById(postId);
+  if (!el || prefersReducedMotion()) {
+    removeFromFeed();
+    return;
+  }
+
+  // Flash red and fade out, then remove and let the survivors slide up.
+  el.animate(
+    [
+      { backgroundColor: STATE_BG_COLORS.deleted, opacity: 1 },
+      { backgroundColor: STATE_BG_COLORS.deleted, opacity: 0 },
+    ],
+    { duration: DURATIONS.exit, easing: "ease-in", fill: "forwards" },
+  ).finished.then(removeFromFeed);
 });

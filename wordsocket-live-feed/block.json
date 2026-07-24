@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "wordsocket/live-feed",
-	"version": "0.1.0",
+	"version": "0.1.2",
 	"title": "WordSocket Live Feed",
 	"category": "wordsocket",
 	"description": "A live post feed powered by WPSignal realtime. New posts appear instantly without a page reload.",

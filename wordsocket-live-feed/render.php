@@ -9,13 +9,18 @@
  * @var array $attributes Block attributes.
  */
 
-$columns  = isset($attributes['columns']) ? (int) $attributes['columns'] : 3;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+$columns  = isset($attributes['columns']) ? (int) $attributes['columns'] : 4;
 $per_page = isset($attributes['postsPerPage']) ? (int) $attributes['postsPerPage'] : 100;
 
 $query = new WP_Query([
 	'post_type'      => 'post',
 	'post_status'    => 'publish',
 	'posts_per_page' => $per_page,
+	'no_found_rows'  => true,
 	// Match wp-admin: newest first, ties broken by oldest id first.
 	'orderby'        => [
 		'date' => 'DESC',

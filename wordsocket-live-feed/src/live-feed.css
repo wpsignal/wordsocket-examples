@@ -1,4 +1,6 @@
 .wpslf-list {
+  --line-clamp: 2;
+
   list-style: none;
   padding: 0;
   margin: 0;
@@ -12,7 +14,6 @@
   border: 1px solid #666;
   padding: 1rem;
   box-shadow: 0 0 0.5rem 0 rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
   text-decoration: none;
   color: #000;
   font-size: 1rem;
@@ -30,13 +31,13 @@
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 3;
+    -webkit-line-clamp: var(--line-clamp);
+    line-clamp: var(--line-clamp);
   }
 }
 
 @media (min-width: 768px) {
   .wpslf-list {
-    grid-template-columns: repeat(var(--columns, 3), 1fr);
+    grid-template-columns: repeat(var(--columns, 4), 1fr);
   }
 }

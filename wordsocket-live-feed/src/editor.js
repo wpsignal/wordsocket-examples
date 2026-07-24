@@ -1,17 +1,17 @@
 /**
  * WordSocket Live Feed - Editor script.
  */
-( function () {
-	const { registerBlockType } = wp.blocks;
-	const ServerSideRender = wp.serverSideRender;
-	const el = wp.element.createElement;
+const {
+  blocks: { registerBlockType },
+  serverSideRender: ServerSideRender,
+  element: { createElement: el },
+} = wp;
 
-	registerBlockType( 'wordsocket/live-feed', {
-		edit( { attributes } ) {
-			return el( ServerSideRender, {
-				block: 'wordsocket/live-feed',
-				attributes,
-			} );
-		},
-	} );
-} )();
+registerBlockType("wordsocket/live-feed", {
+  edit({ attributes }) {
+    return el(ServerSideRender, {
+      block: "wordsocket/live-feed",
+      attributes,
+    });
+  },
+});

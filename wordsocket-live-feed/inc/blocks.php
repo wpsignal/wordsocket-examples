@@ -15,8 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register the block.
  */
 function register_blocks() {
-	register_block_type( DIR, [
-		'render' => DIR . 'render.php',
-	] );
+	register_block_type( DIR );
 }
 add_action( 'init', __NAMESPACE__ . '\register_blocks' );

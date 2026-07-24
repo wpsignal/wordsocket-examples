@@ -23,23 +23,23 @@ function register_channel( array $channels, int $user_id, string $site_id ) {
 add_filter( 'wpsignal_token_channels', __NAMESPACE__ . '\register_channel', 10, 3 );
 
 /**
- * Register the `livefeed.updated` WPSignal trigger.
+ * Register the `livefeed.updated` and `livefeed.deleted` WPSignal triggers.
  */
 function register_trigger() {
 	WPS::trigger( 'livefeed.updated' )
-		->on( 'save_post', 10, 3 )
+		->on( 'save_post', 10, 2 )
 		->channel( 'livefeed' )
-		->data( fn( $post_ID, $post_after, $_post_before ) => [
-				'postId'  => $post_ID,
-				'title'   => get_the_title( $post_after ),
-				'url'     => get_permalink( $post_after ),
-				'date'    => $post_after->post_date,
-				'excerpt' => get_the_excerpt( $post_after ),
-			] )
-		->when( function ( $_post_ID, $post_after, $_post_before ) {
-			return $post_after->post_status === 'publish'
-				&& $post_after->post_type === 'post';
-		} )
+		->data( fn( $post_id, $post ) => [
+			'postId'  => $post_id,
+			'title'   => get_the_title( $post ),
+			'url'     => get_permalink( $post ),
+			'date'    => $post->post_date,
+			'excerpt' => get_the_excerpt( $post ),
+		] )
+		->when( fn( $post_id, $post ) =>
+			$post->post_status === 'publish'
+			&& $post->post_type === 'post'
+		)
 		->register();
 
 	// When a published post leaves the feed (trashed or unpublished), trigger

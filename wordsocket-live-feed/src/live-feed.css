@@ -1,25 +1,47 @@
 .wpslf-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
 .wpslf-item {
-    margin-bottom: 1rem;
+  background-color: #fff;
+  border: 1px solid #666;
+  padding: 1rem;
+  box-shadow: 0 0 0.5rem 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: #000;
+  font-size: 1rem;
+
+  time {
+    font-size: 0.8rem;
+    opacity: 0.5;
+  }
+
+  h3 {
+    margin-top: 0;
+  }
+
+  p {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 3;
+  }
+}
+
+@media (min-width: 768px) {
+  .wpslf-list {
+    grid-template-columns: repeat(var(--columns, 3), 1fr);
+  }
+
+  .wpslf-item {
     grid-column: var(--column);
     grid-row: var(--row);
-    transform: translate(
-        calc((var(--prev-column) - var(--column)) * 100%),
-        calc((var(--prev-row) - var(--row)) * 100%)
-    );
-    transition: transform 0.3s ease;
-    
-    @starting-style {
-        grid-column: var(--prev-column);
-        grid-row: var(--row);
-        transform: translate(0, 0);
-    }
+  }
 }

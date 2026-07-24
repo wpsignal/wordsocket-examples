@@ -11,7 +11,7 @@
 	"render": "file:./render.php",
 	"editorScript": "file:./src/editor.js",
 	"viewScriptModule": "file:./src/live-feed.js",
-	"viewStyle": "file:./src/live-feed.css",
+	"style": "file:./src/live-feed.css",
 	"supports": {
 		"html": false,
 		"interactivity": true
@@ -19,7 +19,11 @@
 	"attributes": {
 		"postsPerPage": {
 			"type": "integer",
-			"default": 5
+			"default": 100
+		},
+		"columns": {
+			"type": "integer",
+			"default": 4
 		}
 	}
 }

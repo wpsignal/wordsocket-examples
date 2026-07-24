@@ -2,45 +2,101 @@
  * WordSocket Live Feed - Interactivity API store.
  */
 
-import { store, getContext, getServerState } from "@wordpress/interactivity";
+import { store, getServerState } from "@wordpress/interactivity";
 
-const COLUMNS = 3;
+const CARD_SELECTOR = ".wpslf-item";
+const DURATION = 300;
+
+const columnCount = parseInt(
+  document.querySelector("[data-wpslf-columns]").dataset.wpslfColumns,
+  10,
+);
 
 const { state } = store("wordsocket/live-feed", {
   state: {
     ...getServerState(),
+    columnCount,
   },
 });
 
+const cards = () => document.querySelectorAll(CARD_SELECTOR);
+
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /**
- * Listen for WPSignal `post.published` events dispatched by the WPSignal
- * client as `wpsignal:post.published` CustomEvents on `document`.
+ * Re-place posts onto the grid in their current order.
  */
-const on = WPS.on("livefeed.updated", (post, event) => {
-  if (!post || !post.id) {
+const placeOnGrid = (posts) =>
+  posts.map((post, index) => ({
+    ...post,
+    column: String((index % columnCount) + 1),
+    row: String(Math.floor(index / columnCount) + 1),
+  }));
+
+/**
+ * Record where every card sits, apply the state change, then animate
+ * each surviving card from its old position to its new one.
+ */
+const animateCards = (mutate) => {
+  if (prefersReducedMotion()) {
+    mutate();
     return;
   }
 
-  const postIndex = state.posts.findIndex((p) => p.id === post.id);
-  let posts = [...state.posts];
-  if (postIndex >= 0) {
-    posts[postIndex] = { ...posts[postIndex], ...post };
-  } else {
-    posts.unshift(post);
-  }
-
-  const sortedByDate = posts.sort(
-    (a, b) => new Date(b.date) - new Date(a.date),
+  const before = new Map(
+    [...cards()].map((el) => [el.dataset.postId, el.getBoundingClientRect()]),
   );
-  state.posts = sortedByDate.map((p, index) => {
-    const col = (index % COLUMNS) + 1;
-    return {
-      ...p,
-      index: String(index),
-      prevColumn: p.column ?? String(col),
-      column: String(col),
-      row: String(Math.floor(index / COLUMNS) + 1),
-      prevRow: p.row ?? String(Math.floor(index / COLUMNS) + 1),
-    };
+  mutate();
+
+  requestAnimationFrame(() => {
+    for (const el of cards()) {
+      const first = before.get(el.dataset.postId);
+      if (!first) continue; // brand-new card: nothing to slide from
+
+      const last = el.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (!dx && !dy) continue; // did not move
+
+      el.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
+        { duration: DURATION, easing: "ease" },
+      );
+    }
+  });
+};
+
+/**
+ * Handle the `livefeed.updated` event.
+ */
+WPS.on("livefeed.updated", (updatedPost) => {
+  animateCards(() => {
+    const posts = [...state.posts];
+    const index = posts.findIndex((p) => p.postId === updatedPost.postId);
+    if (index >= 0) {
+      posts[index] = { ...posts[index], ...updatedPost };
+    } else {
+      posts.unshift(updatedPost);
+    }
+    state.posts = placeOnGrid(
+      // Match wp-admin: newest first, ties broken by oldest id first.
+      posts.sort(
+        (a, b) => new Date(b.date) - new Date(a.date) || a.postId - b.postId,
+      ),
+    );
+  });
+});
+
+
+/**
+ * Handle the `livefeed.deleted` event.
+ */
+WPS.on("livefeed.deleted", ({ postId }) => {
+  if (!state.posts.some((p) => p.postId === postId)) {
+    return; // not in the current feed
+  }
+  animateCards(() => {
+    state.posts = placeOnGrid(state.posts.filter((p) => p.postId !== postId));
   });
 });

@@ -2,5 +2,5 @@
 !.gitignore
 !README.md
 !LICENSE.md
-!wordsocket-live-feed
-!wordsocket-live-feed/**/*
+!wordsocket-living-posts
+!wordsocket-living-posts/**/*

@@ -2,10 +2,10 @@
 /**
  * Blocks.
  *
- * @package WPSignal\Extensions\LiveFeed
+ * @package WPSignal\Extensions\LivingPosts
  */
 
-namespace WPSignal\Extensions\LiveFeed;
+namespace WPSignal\Extensions\LivingPosts;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

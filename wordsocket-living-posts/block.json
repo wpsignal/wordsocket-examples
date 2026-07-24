@@ -1,17 +1,17 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "wordsocket/live-feed",
+	"name": "wordsocket/living-posts",
 	"version": "0.1.2",
-	"title": "WordSocket Live Feed",
+	"title": "WordSocket Living Posts",
 	"category": "wordsocket",
-	"description": "A live post feed powered by WPSignal realtime. New posts appear instantly without a page reload.",
-	"keywords": [ "live", "feed", "realtime", "wpsignal", "wordsocket" ],
+	"description": "A live, self-updating grid of posts powered by WPSignal realtime. Posts appear, update, and disappear without a page reload.",
+	"keywords": [ "living", "posts", "live", "realtime", "wpsignal", "wordsocket" ],
 	"textdomain": "wordsocket",
 	"render": "file:./render.php",
 	"editorScript": "file:./src/editor.js",
-	"viewScriptModule": "file:./src/live-feed.js",
-	"style": "file:./src/live-feed.css",
+	"viewScriptModule": "file:./src/living-posts.js",
+	"style": "file:./src/living-posts.css",
 	"supports": {
 		"html": false,
 		"interactivity": true

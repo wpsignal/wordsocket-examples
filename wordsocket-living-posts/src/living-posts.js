@@ -1,10 +1,10 @@
 /**
- * WordSocket Live Feed - Interactivity API store.
+ * WordSocket Living Posts - Interactivity API store.
  */
 
 import { store, getServerState } from "@wordpress/interactivity";
 
-const CARD_SELECTOR = ".wpslf-item";
+const CARD_SELECTOR = ".wpslp-item";
 const DURATIONS = {
   move: 300,
   flash: 1000,
@@ -15,7 +15,7 @@ const STATE_BG_COLORS = {
   deleted: "#fecaca",
 };
 
-const { state } = store("wordsocket/live-feed", {
+const { state } = store("wordsocket/living-posts", {
   state: {
     ...getServerState(),
   },
@@ -87,9 +87,9 @@ function animateCards(mutateCallback) {
 }
 
 /**
- * WPSignal: Handle the `livefeed.updated` event.
+ * WPSignal: Handle the `livingposts.updated` event.
  */
-WPS.on("livefeed.updated", (updatedPost) => {
+WPS.on("lp.updated", (updatedPost) => {
   animateCards(() => {
     const posts = [...state.posts];
     const index = posts.findIndex((p) => p.postId === updatedPost.postId);
@@ -120,9 +120,9 @@ WPS.on("livefeed.updated", (updatedPost) => {
 });
 
 /**
- * WPSignal: Handle the `livefeed.deleted` event.
+ * WPSignal: Handle the `livingposts.deleted` event.
  */
-WPS.on("livefeed.deleted", ({ postId }) => {
+WPS.on("lp.deleted", ({ postId }) => {
   if (!state.posts.some((p) => p.postId === postId)) {
     return; // not in the current feed
   }

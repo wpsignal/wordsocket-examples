@@ -1,3 +1,5 @@
+<a href="https://wpsignal.io/wordsocket" target="_blank"><img src="https://wpsignal.io/gh-banner.jpg"></a>
+
 # WordSocket Examples
 
 Official example plugins showing how to build realtime WordPress features on
@@ -11,7 +13,7 @@ on WordPress hooks, and subscribed browsers receive them live over WebSocket
 
 | Plugin | What it demonstrates |
 |--------|----------------------|
-| [`wordsocket-live-feed`](./wordsocket-live-feed) | A live post-feed block: published posts appear, update, and disappear in real time with a FLIP animation, built on the WordPress Interactivity API. |
+| [`wordsocket-living-posts`](./wordsocket-living-posts) | A live grid of posts: published posts appear, update, and disappear in real time with a FLIP animation, built on the WordPress Interactivity API. |
 
 ## Requirements
 

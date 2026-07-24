@@ -1,11 +1,11 @@
 <?php
 /**
- * WordSocket Live Feed - WPSignal configuration.
+ * WordSocket Living Posts - WPSignal configuration.
  *
- * @package WPSignal\Extensions\LiveFeed
+ * @package WPSignal\Extensions\LivingPosts
  */
 
-namespace WPSignal\Extensions\LiveFeed;
+namespace WPSignal\Extensions\LivingPosts;
 
 use WPSignal\WPS;
 
@@ -14,21 +14,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register the `livefeed` WPSignal channel.
+ * Register the `livingposts` WPSignal channel.
  */
 function register_channel( array $channels, int $user_id, string $site_id ) {
-	$channels[] = 'site:' . $site_id . ':livefeed';
+	$channels[] = 'site:' . $site_id . ':livingposts';
 	return $channels;
 }
 add_filter( 'wpsignal_token_channels', __NAMESPACE__ . '\register_channel', 10, 3 );
 
 /**
- * Register the `livefeed.updated` and `livefeed.deleted` WPSignal triggers.
+ * Register the `livingposts.updated` and `livingposts.deleted` WPSignal triggers.
  */
 function register_trigger() {
-	WPS::trigger( 'livefeed.updated' )
+	WPS::trigger( 'lp.updated' )
 		->on( 'save_post', 10, 2 )
-		->channel( 'livefeed' )
+		->channel( 'livingposts' )
 		->data( fn( $post_id, $post ) => [
 			'postId'  => $post_id,
 			'title'   => get_the_title( $post ),
@@ -43,10 +43,10 @@ function register_trigger() {
 		->register();
 
 	// When a published post leaves the feed (trashed or unpublished), trigger
-	// the `livefeed.deleted` event.
-	WPS::trigger( 'livefeed.deleted' )
+	// the `livingposts.deleted` event.
+	WPS::trigger( 'lp.deleted' )
 		->on( 'transition_post_status', 10, 3 )
-		->channel( 'livefeed' )
+		->channel( 'livingposts' )
 		->data( fn( $new_status, $old_status, $post ) => [
 			'postId' => $post->ID,
 		] )

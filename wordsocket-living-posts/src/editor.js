@@ -1,5 +1,5 @@
 /**
- * WordSocket Live Feed - Editor script.
+ * WordSocket Living Posts - Editor script.
  */
 const {
   blocks: { registerBlockType },
@@ -7,10 +7,10 @@ const {
   element: { createElement: el },
 } = wp;
 
-registerBlockType("wordsocket/live-feed", {
+registerBlockType("wordsocket/living-posts", {
   edit({ attributes }) {
     return el(ServerSideRender, {
-      block: "wordsocket/live-feed",
+      block: "wordsocket/living-posts",
       attributes,
     });
   },

@@ -1,0 +1,84 @@
+name: Release plugins
+
+# Publishes a GitHub Release + zip for every plugin whose version header has
+# been bumped. A plugin is any top-level "<slug>/<slug>.php" with a "Version:"
+# header. Releases are tagged "<slug>-v<version>" and are idempotent: a plugin
+# is only released when a tag for its current version does not yet exist.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.find.outputs.matrix }}
+      count: ${{ steps.find.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find plugins needing a release
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          items=()
+          for dir in */; do
+            slug="${dir%/}"
+            main="$slug/$slug.php"
+            [ -f "$main" ] || continue
+
+            version=$(grep -oiE 'Version:[[:space:]]*[0-9][^[:space:]]*' "$main" \
+              | head -1 | grep -oE '[0-9][^[:space:]]*' || true)
+            if [ -z "${version:-}" ]; then
+              echo "::warning::no Version header in $main, skipping"
+              continue
+            fi
+
+            tag="${slug}-v${version}"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "· $tag already released"
+              continue
+            fi
+
+            echo "→ will release $tag"
+            items+=("{\"slug\":\"$slug\",\"version\":\"$version\",\"tag\":\"$tag\"}")
+          done
+
+          matrix=$(printf '%s\n' "${items[@]:-}" | grep -v '^$' | jq -sc '{include: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=${#items[@]}" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: discover
+    if: needs.discover.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.slug }}.zip
+        run: |
+          set -euo pipefail
+          # Zip the folder so it extracts to wp-content/plugins/<slug>/.
+          zip -r "${{ matrix.slug }}.zip" "${{ matrix.slug }}" \
+            -x "*/.git/*" "*/node_modules/*" "*/.github/*"
+
+      - name: Publish release ${{ matrix.tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ matrix.tag }}" "${{ matrix.slug }}.zip" \
+            --target "${{ github.sha }}" \
+            --title "${{ matrix.slug }} ${{ matrix.version }}" \
+            --notes "Automated release of \`${{ matrix.slug }}\` v${{ matrix.version }}.
+
+          Install by uploading \`${{ matrix.slug }}.zip\` via Plugins → Add New → Upload Plugin."

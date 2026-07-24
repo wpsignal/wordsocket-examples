@@ -48,7 +48,7 @@ wp_interactivity_state('wordsocket/living-posts', [
 <div
 	<?php echo get_block_wrapper_attributes(); ?>
 	data-wp-interactive="wordsocket/living-posts">
-	<ul class="wpslp-list" style="--columns: <?php echo esc_attr($wpslp_columns); ?>">
+	<ul class="wpslp-list wp-exclude-emoji" style="--columns: <?php echo esc_attr($wpslp_columns); ?>">
 		<template
 			data-wp-each="state.posts"
 			data-wp-each-key="context.item.postId">

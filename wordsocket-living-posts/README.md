@@ -2,7 +2,7 @@
 
 A block that renders a grid of published posts and keeps it alive: when a post is published, updated, or removed, every browser viewing the page reflects the change instantly. Cards slide into their new positions, flash green when added or updated, and fade out red when removed. No reload, no polling.
 
-Built on the WordPress Interactivity API and [WPSignal](https://wpsignal.io/wordsocket)s realtime infrastructure.
+Built on the WordPress Interactivity API and [WPSignal](https://wpsignal.io/wordsocket)'s realtime infrastructure.
 
 ## Requirements
 

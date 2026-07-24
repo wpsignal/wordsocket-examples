@@ -15,6 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register the block.
  */
 function register_blocks() {
-	register_block_type( DIR );
+	register_block_type( PATH );
 }
 add_action( 'init', __NAMESPACE__ . '\register_blocks' );

@@ -124,7 +124,7 @@ WPS.on("lp.updated", (updatedPost) => {
  */
 WPS.on("lp.deleted", ({ postId }) => {
   if (!state.posts.some((p) => p.postId === postId)) {
-    return; // not in the current feed
+    return; // not in existing cards
   }
 
   const removeFromFeed = () =>

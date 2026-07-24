@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const DIR = __DIR__ . '/';
+const PATH = __DIR__ . '/';
 
-require_once DIR . 'inc/blocks.php';
-require_once DIR . 'inc/wordsocket.php';
+require_once PATH . 'inc/blocks.php';
+require_once PATH . 'inc/wordsocket.php';

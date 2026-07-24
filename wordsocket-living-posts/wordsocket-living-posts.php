@@ -3,7 +3,7 @@
  * Plugin Name:       WordSocket Living Posts
  * Plugin URI:        https://wpsignal.io/wordsocket/living-posts
  * Description:       A live, self-updating grid of posts powered by WPSignal realtime and the WordPress Interactivity API. Posts appear, update, and disappear instantly.
- * Version:           0.1.2
+ * Version:           0.1.3
  * Author:            WPSignal
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html

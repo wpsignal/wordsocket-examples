@@ -39,9 +39,4 @@
   .wpslf-list {
     grid-template-columns: repeat(var(--columns, 3), 1fr);
   }
-
-  .wpslf-item {
-    grid-column: var(--column);
-    grid-row: var(--row);
-  }
 }

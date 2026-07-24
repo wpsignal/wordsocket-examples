@@ -17,7 +17,7 @@
  * Domain Path:       /languages
  * Requires at least: 7.0
  * Requires Plugins:  wordsocket
- * Tested up to:      7.0
+ * Tested up to:      8.4
  * Requires PHP:      7.4
  *
  * @package WordSocket

@@ -7,15 +7,9 @@ import { store, getServerState } from "@wordpress/interactivity";
 const CARD_SELECTOR = ".wpslf-item";
 const DURATION = 300;
 
-const columnCount = parseInt(
-  document.querySelector("[data-wpslf-columns]").dataset.wpslfColumns,
-  10,
-);
-
 const { state } = store("wordsocket/live-feed", {
   state: {
     ...getServerState(),
-    columnCount,
   },
 });
 
@@ -23,16 +17,6 @@ const cards = () => document.querySelectorAll(CARD_SELECTOR);
 
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/**
- * Re-place posts onto the grid in their current order.
- */
-const placeOnGrid = (posts) =>
-  posts.map((post, index) => ({
-    ...post,
-    column: String((index % columnCount) + 1),
-    row: String(Math.floor(index / columnCount) + 1),
-  }));
 
 /**
  * Record where every card sits, apply the state change, then animate
@@ -79,11 +63,9 @@ WPS.on("livefeed.updated", (updatedPost) => {
     } else {
       posts.unshift(updatedPost);
     }
-    state.posts = placeOnGrid(
-      // Match wp-admin: newest first, ties broken by oldest id first.
-      posts.sort(
-        (a, b) => new Date(b.date) - new Date(a.date) || a.postId - b.postId,
-      ),
+    // Match wp-admin: newest first, ties broken by oldest id first.
+    state.posts = posts.sort(
+      (a, b) => new Date(b.date) - new Date(a.date) || a.postId - b.postId,
     );
   });
 });
@@ -97,6 +79,6 @@ WPS.on("livefeed.deleted", ({ postId }) => {
     return; // not in the current feed
   }
   animateCards(() => {
-    state.posts = placeOnGrid(state.posts.filter((p) => p.postId !== postId));
+    state.posts = state.posts.filter((p) => p.postId !== postId);
   });
 });

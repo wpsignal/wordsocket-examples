@@ -41,3 +41,8 @@
     grid-template-columns: repeat(var(--columns, 4), 1fr);
   }
 }
+
+/* Prevent anchor clicks in editor */
+.wpslp-editor-preview a {
+  pointer-events: none;
+}

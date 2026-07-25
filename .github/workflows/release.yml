@@ -24,10 +24,10 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           {
-            echo "The latest build of each WordSocket example plugin. Upload a plugin's \`.zip\` via **Plugins → Add New → Upload Plugin**."
+            echo "The latest build of each WordSocket example plugin."
             echo
-            echo "| Plugin | Version |"
-            echo "| --- | --- |"
+            echo "Install a plugin at its pinned version with either command below,"
+            echo "or upload its \`.zip\` via **Plugins → Add New → Upload Plugin**."
           } > dist/notes.md
 
           found=0
@@ -46,7 +46,23 @@ jobs:
             # Zip the folder so it extracts to wp-content/plugins/<slug>/.
             zip -r "dist/${slug}-${version}.zip" "$slug" \
               -x "*/.git/*" "*/node_modules/*" "*/.github/*"
-            echo "| \`${slug}\` | ${version} |" >> dist/notes.md
+
+            url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/latest/${slug}-${version}.zip"
+            {
+              echo
+              echo "### \`${slug}\` ${version}"
+              echo
+              echo "**WP-CLI**"
+              echo '```bash'
+              echo "wp plugin install ${url} --activate"
+              echo '```'
+              echo
+              echo "**Composer** (needs \`composer/installers\`)"
+              echo '```bash'
+              echo "composer config repositories.${slug} '{\"type\":\"package\",\"package\":{\"name\":\"wpsignal/${slug}\",\"version\":\"${version}\",\"type\":\"wordpress-plugin\",\"dist\":{\"type\":\"zip\",\"url\":\"${url}\"}}}'"
+              echo "composer require wpsignal/${slug}:${version}"
+              echo '```'
+            } >> dist/notes.md
             found=$((found + 1))
           done
 

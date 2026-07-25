@@ -26,8 +26,7 @@ jobs:
           {
             echo "The latest build of each WordSocket example plugin."
             echo
-            echo "Install a plugin at its pinned version with either command below,"
-            echo "or upload its \`.zip\` via **Plugins → Add New → Upload Plugin**."
+            echo "Install a plugin at its pinned version with either command below, or upload its \`.zip\` via **Plugins → Add New → Upload Plugin**."
           } > dist/notes.md
 
           found=0
@@ -55,12 +54,6 @@ jobs:
               echo "**WP-CLI**"
               echo '```bash'
               echo "wp plugin install ${url} --activate"
-              echo '```'
-              echo
-              echo "**Composer** (needs \`composer/installers\`)"
-              echo '```bash'
-              echo "composer config repositories.${slug} '{\"type\":\"package\",\"package\":{\"name\":\"wpsignal/${slug}\",\"version\":\"${version}\",\"type\":\"wordpress-plugin\",\"dist\":{\"type\":\"zip\",\"url\":\"${url}\"}}}'"
-              echo "composer require wpsignal/${slug}:${version}"
               echo '```'
             } >> dist/notes.md
             found=$((found + 1))

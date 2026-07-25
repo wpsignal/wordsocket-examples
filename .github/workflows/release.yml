@@ -64,6 +64,6 @@ jobs:
           gh release delete latest --yes --cleanup-tag 2>/dev/null || true
           gh release create latest dist/*.zip \
             --target "${{ github.sha }}" \
-            --title "Example plugins" \
+            --title "WordSocket Example Plugins" \
             --notes-file dist/notes.md \
             --latest

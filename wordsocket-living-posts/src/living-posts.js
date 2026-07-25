@@ -23,6 +23,27 @@ const { state } = store("wordsocket/living-posts", {
 
 const cards = () => document.querySelectorAll(CARD_SELECTOR);
 
+// Deletions committed on a delay, keyed by post ID. A post that comes back
+// before its removal commits (bulk trash then undo) must cancel it.
+const pendingDeletes = new Map();
+
+/**
+ * Abandon a scheduled removal and clear the exit animation's `fill` so a
+ * restored card is not left faded out.
+ *
+ * @param postId Post ID whose pending removal should be dropped.
+ */
+function cancelPendingDelete(postId) {
+  const pending = pendingDeletes.get(postId);
+  if (!pending) {
+    return;
+  }
+
+  pending.cancelled = true;
+  pending.animation?.cancel();
+  pendingDeletes.delete(postId);
+}
+
 /**
  * Resolver function to retrieve a card by its post ID.
  *
@@ -90,6 +111,8 @@ function animateCards(mutateCallback) {
  * WPSignal: Handle the `livingposts.updated` event.
  */
 WPS.on("lp.updated", (updatedPost) => {
+  cancelPendingDelete(updatedPost.postId);
+
   animateCards(() => {
     const posts = [...state.posts];
     const index = posts.findIndex((p) => p.postId === updatedPost.postId);
@@ -127,10 +150,23 @@ WPS.on("lp.deleted", ({ postId }) => {
     return; // not in existing cards
   }
 
-  const removeFromFeed = () =>
+  if (pendingDeletes.has(postId)) {
+    return; // already on its way out
+  }
+
+  const pending = { cancelled: false, animation: null };
+  pendingDeletes.set(postId, pending);
+
+  const removeFromFeed = () => {
+    if (pending.cancelled) {
+      return; // post came back before the removal landed
+    }
+
+    pendingDeletes.delete(postId);
     animateCards(() => {
       state.posts = state.posts.filter((p) => p.postId !== postId);
     });
+  };
 
   const el = cardById(postId);
   if (!el || prefersReducedMotion()) {
@@ -139,11 +175,18 @@ WPS.on("lp.deleted", ({ postId }) => {
   }
 
   // Flash red and fade out, then remove and let the survivors slide up.
-  el.animate(
+  pending.animation = el.animate(
     [
       { backgroundColor: STATE_BG_COLORS.deleted, opacity: 1 },
       { backgroundColor: STATE_BG_COLORS.deleted, opacity: 0 },
     ],
     { duration: DURATIONS.exit, easing: "ease-in", fill: "forwards" },
-  ).finished.then(removeFromFeed);
+  );
+
+  // Hidden tabs freeze the document timeline, so `finished` can stall for as
+  // long as the window is off screen. Commit on whichever settles first.
+  Promise.race([
+    pending.animation.finished.catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, DURATIONS.exit + 100)),
+  ]).then(removeFromFeed);
 });

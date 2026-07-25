@@ -26,6 +26,7 @@ add_filter( 'wpsignal_token_channels', __NAMESPACE__ . '\register_channel', 10, 
  * Register the `lp.updated` and `lp.deleted` WPSignal triggers.
  */
 function register_trigger() {
+	// On post save, update
 	WPS::trigger( 'lp.updated' )
 		->on( 'save_post', 10, 2 )
 		->channel( 'livingposts' )
@@ -42,7 +43,7 @@ function register_trigger() {
 		)
 		->register();
 
-	// When a published post leaves the feed (trashed or unpublished), trigger the `lp.deleted` event.
+	// On post delete
 	WPS::trigger( 'lp.deleted' )
 		->on( 'transition_post_status', 10, 3 )
 		->channel( 'livingposts' )

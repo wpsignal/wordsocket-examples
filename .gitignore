@@ -8,3 +8,9 @@
 !wordsocket-living-posts/**/*
 !test
 !test/**/*
+!wordsocket-presence-lab
+!wordsocket-presence-lab/**/*
+wordsocket-presence-lab/node_modules
+wordsocket-presence-lab/build
+wordsocket-presence-lab/artifacts
+wordsocket-presence-lab/tests/local.json

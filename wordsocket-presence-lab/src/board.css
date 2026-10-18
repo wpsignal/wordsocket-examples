@@ -1,0 +1,47 @@
+#presence-lab {
+	display: grid;
+	gap: 24px;
+	max-width: 1100px;
+
+	& table {
+		border-collapse: collapse;
+		width: 100%;
+		background: #fff;
+		border: 1px solid #c3c4c7;
+	}
+
+	& th,
+	& td {
+		text-align: left;
+		padding: 6px 10px;
+		border-bottom: 1px solid #dcdcde;
+		font-variant-numeric: tabular-nums;
+		vertical-align: top;
+	}
+
+	& code {
+		font-size: 12px;
+	}
+
+	& [data-state="away"] td:nth-child(2) {
+		color: #996800;
+	}
+
+	& [data-state="live"] td:nth-child(2) {
+		color: #007017;
+	}
+
+	& .lab-path {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 8px;
+	}
+
+	& .lab-step {
+		white-space: nowrap;
+	}
+
+	& .lab-empty {
+		color: #646970;
+	}
+}

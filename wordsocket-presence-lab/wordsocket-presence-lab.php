@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       WordSocket Presence Lab
  * Plugin URI:        https://wpsignal.io/wordsocket
- * Description:       Proof of concept for visitor journeys, leaves and away over WordSocket presence. Not for production sites.
- * Version:           0.1.0
+ * Description:       Reference consumer of WordSocket's visitor journeys (WPS.presence.track()): a table of visits and a live board. Not for production sites.
+ * Version:           0.3.0
  * Author:            WPSignal
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,8 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const VERSION    = '0.1.0';
-const DB_VERSION = '1';
+const VERSION    = '0.3.0';
+const DB_VERSION = '2';
 const SLUG       = 'wordsocket-presence-lab';
 const DIR        = __DIR__ . '/';
 define( 'WPSignal\Extensions\PresenceLab\URL', plugin_dir_url( __FILE__ ) );

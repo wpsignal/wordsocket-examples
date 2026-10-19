@@ -1,11 +1,14 @@
 <?php
 /**
- * The lab: one table of visitors, two public routes the browser reports to,
- * the presence namespace, the storefront script, and the admin page.
+ * The lab: one table of journeys (one row per visit, grouped by visitor) fed
+ * by WordSocket's visit and leave reports, the presence namespace, the
+ * storefront script, and the admin page.
  *
- * Everything here is the generic half of ShopSocket's cart history (Phase 60):
- * what WordPress can know about a visitor's path and departure with no
- * heartbeat and no job. Nothing WooCommerce.
+ * Since WordSocket 0.30 the journey, the page step and the two public routes
+ * are WordSocket's (`WPS.presence.track()`, `POST /wpsignal/v1/visit` and
+ * `/leave`); this file is what an extension writes on top: a channel, a
+ * listener on `wpsignal_visitor_visit` and `wpsignal_visitor_leave`, and a
+ * store of its own. Nothing WooCommerce.
  *
  * @package WPSignal\Extensions\PresenceLab
  */
@@ -18,17 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Longest journey string accepted (50 steps of `kind:id:ms` is well under this). */
-const MAX_JOURNEY_BYTES = 4000;
-
-/** A journey: `kind:id:ms` steps joined by `>`. Ids only, never a URL or a word. */
-const JOURNEY_PATTERN = '/^[a-z_]+:\d+:\d+(>[a-z_]+:\d+:\d+)*$/';
-
-/** WordSocket's visitor id is a version 4 UUID. */
-const VISITOR_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
-
 /**
- * The visitors table name.
+ * The journeys table name.
  *
  * @return string
  */
@@ -38,7 +32,10 @@ function table(): string {
 }
 
 /**
- * Create or update the table once per DB_VERSION, WooCommerce's way.
+ * Create the table once per DB_VERSION, WooCommerce's way. A lab keeps no
+ * data worth migrating, and `dbDelta` cannot change a primary key, so a
+ * version bump drops the old table first (version 2 moved the key from the
+ * visitor to the journey).
  *
  * @return void
  */
@@ -50,8 +47,11 @@ function install(): void {
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	$table   = table();
 	$collate = $wpdb->get_charset_collate();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The plugin's own table, name from table().
+	$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
 	dbDelta(
 		"CREATE TABLE {$table} (
+			journey_id char(36) NOT NULL,
 			visitor char(36) NOT NULL,
 			user_id bigint(20) unsigned NULL,
 			journey text NULL,
@@ -59,7 +59,8 @@ function install(): void {
 			first_seen datetime NOT NULL,
 			last_seen datetime NOT NULL,
 			left_at datetime NULL,
-			PRIMARY KEY  (visitor),
+			PRIMARY KEY  (journey_id),
+			KEY visitor (visitor),
 			KEY last_seen (last_seen),
 			KEY left_at (left_at)
 		) {$collate};"
@@ -122,64 +123,6 @@ add_filter(
 );
 
 /**
- * The step this request's page is, as `{ kind, id }`: the post type and id
- * for singular pages, the taxonomy and term id for term archives, and an
- * id-less kind for everything else. Never a slug, title or search term.
- *
- * @return array{kind: string, id: int}
- */
-function page_step(): array {
-	if ( is_front_page() ) {
-		return array(
-			'kind' => 'home',
-			'id'   => (int) get_queried_object_id(),
-		);
-	}
-	if ( is_singular() ) {
-		$type = get_post_type();
-		return array(
-			'kind' => sanitize_key( is_string( $type ) ? $type : 'post' ),
-			'id'   => (int) get_queried_object_id(),
-		);
-	}
-	if ( is_category() ) {
-		return array(
-			'kind' => 'category',
-			'id'   => (int) get_queried_object_id(),
-		);
-	}
-	if ( is_tag() ) {
-		return array(
-			'kind' => 'tag',
-			'id'   => (int) get_queried_object_id(),
-		);
-	}
-	if ( is_tax() ) {
-		$term = get_queried_object();
-		return array(
-			'kind' => sanitize_key( $term->taxonomy ?? 'term' ),
-			'id'   => (int) get_queried_object_id(),
-		);
-	}
-	if ( is_search() ) {
-		return array(
-			'kind' => 'search',
-			'id'   => 0,
-		);
-	}
-	if ( is_archive() || is_home() ) {
-		return array(
-			'kind' => 'archive',
-			'id'   => 0,
-		);
-	}
-	return array(
-		'kind' => 'other',
-		'id'   => 0,
-	);
-}
-
-/**
  * A wp-scripts asset file, or a fallback for an unbuilt checkout.
  *
  * @param string $name Entry name.
@@ -210,10 +153,9 @@ function inline_config( string $handle, string $name, array $config ): void {
 }
 
 /*
- * The tracker rides on every public page WordSocket's client is on. The nonce
- * goes only to logged-in visitors: a guest page may come from a full-page
- * cache, and a stale nonce on a cookie-less request is refused by the REST
- * API where no nonce at all is accepted.
+ * The tracker rides on every public page WordSocket's client is on. The page's
+ * step, the report routes and the nonce are WordSocket's own config now; the
+ * lab only names its channel.
  */
 add_action(
 	'wp_enqueue_scripts',
@@ -229,40 +171,27 @@ add_action(
 			$asset['version'],
 			true
 		);
-		$step   = page_step();
-		$config = array(
-			'channel'  => CHANNEL,
-			'kind'     => $step['kind'],
-			'id'       => $step['id'],
-			'visitUrl' => rest_url( REST_NS . '/visit' ),
-			'leaveUrl' => rest_url( REST_NS . '/leave' ),
-		);
-		if ( is_user_logged_in() ) {
-			$config['nonce'] = wp_create_nonce( 'wp_rest' );
-		}
-		inline_config( SLUG . '-track', 'wordsocketPresenceLab', $config );
+		inline_config( SLUG . '-track', 'wordsocketPresenceLab', array( 'channel' => CHANNEL ) );
 	},
 	20
 );
 
 /**
- * Write what a visitor reported. The row is created on the first report and
- * updated by later ones, but only by a report at least as far along: the leave
- * of one page and the visit of the next are two requests that can land in
- * either order, so a report is ordered by how many steps its journey holds,
- * never by when it arrived. A visit clears `left_at` (they are back), a leave
- * sets it.
+ * Write what a visitor reported, as WordSocket hands it to the
+ * `wpsignal_visitor_visit` and `wpsignal_visitor_leave` actions.
  *
- * @param string $visitor The browser's visitor id.
- * @param string $journey The journey string, possibly empty.
- * @param bool   $leaving Whether this is the leave report.
+ * @param array{visitor: string, journey_id: string, journey: string, steps: int, user_id: int, leaving: bool} $report The report.
  * @return void
  */
-function record( string $visitor, string $journey, bool $leaving ): void {
+function record( array $report ): void {
 	global $wpdb;
-	$now     = current_time( 'mysql', true );
-	$user_id = get_current_user_id();
-	$steps   = '' === $journey ? 0 : substr_count( $journey, '>' ) + 1;
+	$now        = current_time( 'mysql', true );
+	$visitor    = $report['visitor'];
+	$journey_id = $report['journey_id'];
+	$journey    = $report['journey'];
+	$steps      = $report['steps'];
+	$user_id    = $report['user_id'];
+	$leaving    = $report['leaving'];
 	/*
 	 * `prepare()` turns a PHP null into an empty string, which MySQL stores as
 	 * 0 or the zero date, so the two nullable values are spelled as literals.
@@ -273,14 +202,15 @@ function record( string $visitor, string $journey, bool $leaving ): void {
 	$wpdb->query(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from table(); the literals are an integer or NULL and a prepared string or NULL; `steps` is assigned last so the IFs read the stored count.
-			'INSERT INTO ' . table() . ' (visitor, user_id, journey, steps, first_seen, last_seen, left_at)
-			VALUES (%s, ' . $user_sql . ', %s, %d, %s, %s, ' . $left_sql . ')
+			'INSERT INTO ' . table() . ' (journey_id, visitor, user_id, journey, steps, first_seen, last_seen, left_at)
+			VALUES (%s, %s, ' . $user_sql . ', %s, %d, %s, %s, ' . $left_sql . ')
 			ON DUPLICATE KEY UPDATE
 				user_id = COALESCE(VALUES(user_id), user_id),
 				journey = IF(VALUES(steps) >= steps, VALUES(journey), journey),
 				last_seen = IF(VALUES(steps) >= steps, VALUES(last_seen), last_seen),
 				left_at = IF(VALUES(steps) >= steps, VALUES(left_at), left_at),
 				steps = GREATEST(steps, VALUES(steps))',
+			$journey_id,
 			$visitor,
 			$journey,
 			$steps,
@@ -288,33 +218,35 @@ function record( string $visitor, string $journey, bool $leaving ): void {
 			$now
 		)
 	);
+	if ( $leaving ) {
+		return;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table.
+	$wpdb->query(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from table().
+			'UPDATE ' . table() . ' SET left_at = last_seen WHERE visitor = %s AND journey_id <> %s AND left_at IS NULL',
+			$visitor,
+			$journey_id
+		)
+	);
 }
 
-/**
- * The handler for both public routes.
- *
- * @param \WP_REST_Request $request The request.
- * @param bool             $leaving Whether this is `/leave`.
- * @return \WP_REST_Response
- */
-function report( \WP_REST_Request $request, bool $leaving ): \WP_REST_Response {
-	record( (string) $request->get_param( 'v' ), (string) $request->get_param( 'journey' ), $leaving );
-	$response = rest_ensure_response( array( 'ok' => true ) );
-	$response->header( 'Cache-Control', 'no-store' );
-	return $response;
-}
+add_action( 'wpsignal_visitor_visit', __NAMESPACE__ . '\\record' );
+add_action( 'wpsignal_visitor_leave', __NAMESPACE__ . '\\record' );
 
 /**
- * The latest rows for the admin page.
+ * The latest rows for the admin page, newest first; the board groups them by visitor.
  *
  * @return array<int, array<string, mixed>>
  */
 function rows(): array {
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- The plugin's own table, no user input.
-	$rows = $wpdb->get_results( 'SELECT visitor, user_id, journey, first_seen, last_seen, left_at FROM ' . table() . ' ORDER BY last_seen DESC LIMIT 50', ARRAY_A );
+	$rows = $wpdb->get_results( 'SELECT journey_id, visitor, user_id, journey, first_seen, last_seen, left_at FROM ' . table() . ' ORDER BY last_seen DESC LIMIT 50', ARRAY_A );
 	return array_map(
 		static fn( array $row ): array => array(
+			'journey_id' => (string) $row['journey_id'],
 			'visitor'    => (string) $row['visitor'],
 			'user_id'    => null === $row['user_id'] ? null : (int) $row['user_id'],
 			'journey'    => (string) $row['journey'],
@@ -329,32 +261,6 @@ function rows(): array {
 add_action(
 	'rest_api_init',
 	static function (): void {
-		$args = array(
-			'v'       => array(
-				'type'              => 'string',
-				'required'          => true,
-				'validate_callback' => static fn( $value ): bool => is_string( $value ) && 1 === preg_match( VISITOR_PATTERN, $value ),
-			),
-			'journey' => array(
-				'type'              => 'string',
-				'default'           => '',
-				'validate_callback' => static fn( $value ): bool => is_string( $value )
-					&& strlen( $value ) <= MAX_JOURNEY_BYTES
-					&& ( '' === $value || 1 === preg_match( JOURNEY_PATTERN, $value ) ),
-			),
-		);
-		foreach ( array( 'visit' => false, 'leave' => true ) as $route => $leaving ) {
-			register_rest_route(
-				REST_NS,
-				'/' . $route,
-				array(
-					'methods'             => 'POST',
-					'args'                => $args,
-					'callback'            => static fn( \WP_REST_Request $request ) => report( $request, $leaving ),
-					'permission_callback' => '__return_true',
-				)
-			);
-		}
 		register_rest_route(
 			REST_NS,
 			'/rows',

@@ -114,7 +114,7 @@ sequenceDiagram
     R->>R: socket gone at once (process killed) or after the 45 s deadline (half-open)
     R->>B: leave, dropped after 6 s
   else back after more than 30 minutes
-    V->>V: new journey id, old one ends in away:0:1800000
+    V->>V: new journey id, old one ends in away:0:1800
     V-->>WP: POST /leave for the old journey, POST /visit for the new
     WP->>WP: the visit ends the visitor's other open journeys; a leave never does
   end

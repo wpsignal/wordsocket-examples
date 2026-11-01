@@ -48,6 +48,12 @@ async function connected(page: Page): Promise<void> {
     .toMatch(/^\{"connected":true/);
 }
 
+/** The visitor's first interaction, which starts a new journey (WordSocket 0.31). */
+async function engage(page: Page): Promise<void> {
+  await page.mouse.move(12, 12);
+  await page.mouse.move(48, 48);
+}
+
 function visitorId(page: Page): Promise<string> {
   return page.evaluate(() => window.WPS!.visitorId());
 }
@@ -114,11 +120,13 @@ test.describe("Presence lab", () => {
     const { context, page: visitor } = await visitorPage(browser, baseURL!);
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     await expect(liveRow(page, v)).toHaveAttribute("data-state", "live");
 
     await visitor.goto(HELLO);
     await connected(visitor);
+    await engage(visitor);
 
     // Through the navigation and the grace after it, the row never goes.
     const until = Date.now() + GRACE_MS + 2_000;
@@ -139,6 +147,7 @@ test.describe("Presence lab", () => {
     const { context, page: visitor } = await visitorPage(browser, baseURL!);
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     await expect(liveRow(page, v)).toHaveAttribute("data-state", "live");
     await expect.poll(async () => (await storedRow(requestUtils, v))?.journey ?? "").toMatch(/^home:\d+:\d+$/);
@@ -157,6 +166,7 @@ test.describe("Presence lab", () => {
     const { context, page: visitor } = await visitorPage(browser, baseURL!);
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     await expect(liveRow(page, v)).toHaveAttribute("data-state", "live");
 
@@ -186,6 +196,7 @@ test.describe("Presence lab", () => {
     await visitor.route("**/wpsignal/v1/leave", (route) => route.abort());
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     await expect(liveRow(page, v)).toHaveAttribute("data-state", "live");
     await expect.poll(async () => (await storedRow(requestUtils, v))?.journey ?? "").toMatch(/^home:\d+:\d+$/);
@@ -210,11 +221,14 @@ test.describe("Presence lab", () => {
     const visitor = await page.context().newPage();
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     await visitor.goto(HELLO);
     await connected(visitor);
+    await engage(visitor);
     await visitor.reload();
     await connected(visitor);
+    await engage(visitor);
     expect(await visitorId(visitor)).toBe(v);
 
     await expect
@@ -256,6 +270,7 @@ test.describe("Presence lab", () => {
       await visitor.goto(`/${cachedPath}`);
       try {
         await connected(visitor);
+        await engage(visitor);
       } catch (error) {
         throw new Error(`${(error as Error).message}\nconsole:\n${consoleLines.join("\n")}`);
       }
@@ -277,6 +292,7 @@ test.describe("Presence lab", () => {
     await visitor.route("**/wpsignal/v1/leave", (route) => route.abort());
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     const first = await journeyId(visitor);
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
@@ -286,6 +302,7 @@ test.describe("Presence lab", () => {
     await ageLastArrival(visitor);
     await visitor.goto(HELLO);
     await connected(visitor);
+    await engage(visitor);
     const second = await journeyId(visitor);
     expect(second).not.toBe(first);
 
@@ -310,6 +327,7 @@ test.describe("Presence lab", () => {
     const { context, page: visitor } = await visitorPage(browser, baseURL!);
     await visitor.goto("/");
     await connected(visitor);
+    await engage(visitor);
     const v = await visitorId(visitor);
     const first = await journeyId(visitor);
     await expect(liveRow(page, v)).toHaveAttribute("data-state", "live");

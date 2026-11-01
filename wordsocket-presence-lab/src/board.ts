@@ -39,11 +39,11 @@ function isAway(journey: string | undefined): boolean {
   return lastStep(journey ?? "").startsWith(`${AWAY}:`);
 }
 
-function seconds(ms: string): string {
-  return `${(Number(ms) / 1000).toFixed(1)}s`;
+function seconds(s: string): string {
+  return `${Number(s) || 0}s`;
 }
 
-/** `product:123:3000>away:0:22000` as readable steps. */
+/** `product:123:3>away:0:22` as readable steps. */
 function renderPath(journey: string): HTMLElement {
   const path = document.createElement("span");
   path.className = "lab-path";
@@ -53,10 +53,10 @@ function renderPath(journey: string): HTMLElement {
     return path;
   }
   journey.split(SEPARATOR).forEach((step, index) => {
-    const [kind, id, ms] = step.split(":");
+    const [kind, id, s] = step.split(":");
     const el = document.createElement("span");
     el.className = "lab-step";
-    el.textContent = `${index > 0 ? "› " : ""}${kind}${id !== "0" ? ` ${id}` : ""} (${seconds(ms ?? "0")})`;
+    el.textContent = `${index > 0 ? "› " : ""}${kind}${id !== "0" ? ` ${id}` : ""} (${seconds(s ?? "0")})`;
     path.appendChild(el);
   });
   return path;

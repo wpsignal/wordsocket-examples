@@ -136,8 +136,9 @@ test.describe("Presence lab", () => {
     }
     await expect(liveRow(page, v)).toHaveAttribute("data-journey", /^home:\d+:\d+>post:1:\d+$/);
 
-    // WordPress holds both steps, and the leave of the first page did not win over the visit of the second.
-    await expect.poll(async () => (await storedRow(requestUtils, v))?.journey ?? "").toMatch(/^home:\d+:\d+>post:1:\d+$/);
+    // The hop wrote nothing (0.31: a visit is written on a change of state); hiding the tab writes both steps, and no leave was sent.
+    await setHidden(visitor, true);
+    await expect.poll(async () => (await storedRow(requestUtils, v))?.journey ?? "").toMatch(/^home:\d+:\d+>post:1:\d+>away:0:\d+$/);
     expect((await storedRow(requestUtils, v))?.left_at).toBeNull();
     await context.close();
   });
@@ -231,9 +232,11 @@ test.describe("Presence lab", () => {
     await engage(visitor);
     expect(await visitorId(visitor)).toBe(v);
 
+    // Hiding the tab writes the pages the hops held back.
+    await setHidden(visitor, true);
     await expect
       .poll(async () => (await storedRow(requestUtils, v))?.journey ?? "")
-      .toMatch(/^home:\d+:\d+>post:1:\d+>post:1:\d+$/);
+      .toMatch(/^home:\d+:\d+>post:1:\d+>post:1:\d+>away:0:\d+$/);
     const row = await storedRow(requestUtils, v);
     expect(row?.user_id ?? 0).toBeGreaterThan(0);
     expect(row?.left_at).toBeNull();

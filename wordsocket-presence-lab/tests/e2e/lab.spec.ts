@@ -19,6 +19,7 @@ const HELLO = "/?p=1";
 const GRACE_MS = 6_000;
 const JOURNEY_KEY = "wordsocket-journey";
 const JOURNEY_GAP_MS = 30 * 60_000;
+const JOURNEY_GAP_S = JOURNEY_GAP_MS / 1000;
 
 interface StoredRow {
   journey_id: string;
@@ -181,7 +182,8 @@ test.describe("Presence lab", () => {
     const journey = (await liveRow(page, v).getAttribute("data-journey")) ?? "";
     const match = journey.match(/^home:\d+:\d+>away:0:(\d+)>home:\d+:\d+$/);
     expect(match, `journey ${journey}`).not.toBeNull();
-    expect(Number(match![1])).toBeGreaterThanOrEqual(1_400);
+    // Whole seconds: a second and a half hidden rounds to 1 or 2.
+    expect(Number(match![1])).toBeGreaterThanOrEqual(1);
     await context.close();
   });
 
@@ -350,7 +352,7 @@ test.describe("Presence lab", () => {
     await expect.poll(async () => (await storedRows(requestUtils, v)).length).toBe(2);
     const rows = await storedRows(requestUtils, v);
     const previous = rows.find((row) => row.journey_id === first);
-    expect(previous?.journey).toMatch(new RegExp(`^home:\\d+:\\d+>away:0:${JOURNEY_GAP_MS}$`));
+    expect(previous?.journey).toMatch(new RegExp(`^home:\\d+:\\d+>away:0:${JOURNEY_GAP_S}$`));
     expect(previous?.left_at).not.toBeNull();
     const latest = rows.find((row) => row.journey_id === second);
     expect(latest?.journey).toMatch(/^home:\d+:\d+$/);

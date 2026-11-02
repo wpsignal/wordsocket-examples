@@ -40,6 +40,15 @@ interface WPSApi {
 		track( channel: string, options?: { state?: Record< string, unknown >; report?: boolean } ): WPSPresenceTracker;
 	};
 	readonly state: WPSConnectionState;
+	/** The read-only view of the site and page, WordSocket 0.31. */
+	readonly config?: {
+		readonly version: string;
+		readonly isDebug: boolean;
+		readonly siteName: string;
+		readonly page: { readonly kind: string; readonly id: number };
+	};
+	/** Logs while WordSocket's debug mode is on, WordSocket 0.31. */
+	debug?( ...args: unknown[] ): void;
 }
 
 interface PresenceLabTrackConfig {
